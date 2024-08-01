@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geolocalização de IP ou Domínio</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            background-color: #333;
+            color: #fff;
+        }
+        .container {
+            width: 90%;
+            max-width: 1000px;
+            margin: auto;
+            overflow: hidden;
+        }
+        #map {
+            width: 100%;
+            height: 300px;
+            border: 1px solid #555;
+            margin: 20px 0;
+        }
+        .info-box {
+            background: #444;
+            padding: 15px;
+            border: 1px solid #555;
+            border-radius: 5px;
+            text-align: left;
+            margin: 0 auto;
+            max-width: 600px;
+        }
+        .info-box p {
+            margin: 5px 0;
+        }
+        input[type="text"] {
+            padding: 10px;
+            width: 80%;
+            max-width: 400px;
+            border: 1px solid #555;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            background: #007bff;
+            color: #fff;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Geolocalização de IP ou Domínio</h1>
+        <div id="map"></div>
+        <div class="info-box" id="info-box">
+            <p><strong>Bandeira:</strong> <span id="flag">Carregando...</span></p>
+            <p><strong>País:</strong> <span id="country">Carregando...</span></p>
+            <p><strong>Estado:</strong> <span id="region">Carregando...</span></p>
+            <p><strong>Cidade:</strong> <span id="city">Carregando...</span></p>
+            <p><strong>Provedor:</strong> <span id="org">Carregando...</span></p>
+            <p><strong>Latitude:</strong> <span id="lat">Carregando...</span></p>
+            <p><strong>Longitude:</strong> <span id="lon">Carregando...</span></p>
+        </div>
+        <input type="text" id="input" placeholder="Digite o IP ou domínio para consultar">
+        <button onclick="handleSearch()">Consultar</button>
+    </div>
+
+    <script>
+        async function fetchIPData(ip = '') {
+            const url = ip ? `https://ipinfo.io/${ip}/json` : 'https://ipinfo.io/json';
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`Erro ${response.status}: ${response.statusText}`);
+                }
+                const data = await response.json();
+                document.getElementById('flag').textContent = data.country || 'Desconhecido';
+                document.getElementById('country').textContent = data.country || 'Desconhecido';
+                document.getElementById('region').textContent = data.region || 'Desconhecido';
+                document.getElementById('city').textContent = data.city || 'Desconhecido';
+                document.getElementById('org').textContent = data.org || 'Desconhecido';
+                document.getElementById('lat').textContent = (data.loc || '').split(',')[0] || 'Desconhecido';
+                document.getElementById('lon').textContent = (data.loc || '').split(',')[1] || 'Desconhecido';
+                updateMap(data.loc || '0,0');
+            } catch (error) {
+                console.error('Erro ao buscar informações do IP:', error);
+                alert(`Erro ao buscar informações do IP: ${error.message}`);
+            }
+        }
+
+        async function fetchDomainData(domain) {
+            try {
+                const response = await fetch(`https://dns.google/resolve?name=${domain}&type=A`);
+                if (!response.ok) {
+                    throw new Error(`Erro ${response.status}: ${response.statusText}`);
+                }
+                const data = await response.json();
+                if (data.Answer) {
+                    const ip = data.Answer[0].data;
+                    fetchIPData(ip);
+                } else {
+                    throw new Error('Não foi possível encontrar o IP para o domínio fornecido.');
+                }
+            } catch (error) {
+                console.error('Erro ao buscar o IP do domínio:', error);
+                alert(`Erro ao buscar o IP do domínio: ${error.message}`);
+            }
+        }
+
+        async function handleSearch() {
+            const input = document.getElementById('input').value.trim();
+            if (input.includes('.')) {
+                fetchDomainData(input);
+            } else {
+                fetchIPData(input);
+            }
+        }
+
+        function updateMap(location) {
+            const [lat, lon] = location.split(',');
+            const map = document.getElementById('map');
+            map.innerHTML = `<iframe src="https://www.google.com/maps?q=${lat},${lon}&hl=es;z=14&output=embed" width="100%" height="300" frameborder="0" style="border:0" allowfullscreen></iframe>`;
+        }
+
+        // Fetch data for the user's IP on page load
+        window.onload = function() {
+            fetchIPData();
+        };
+    </script>
+</body>
+</html>
